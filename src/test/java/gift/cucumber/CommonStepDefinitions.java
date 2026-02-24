@@ -5,15 +5,11 @@ import io.cucumber.java.ko.그러면;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class CommonStepDefinitions {
-
-    @LocalServerPort
-    int port;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -23,7 +19,8 @@ public class CommonStepDefinitions {
 
     @Before
     public void setUp() {
-        RestAssured.port = port;
+        RestAssured.baseURI = "http://localhost";
+        RestAssured.port = 28080;
         jdbcTemplate.execute("TRUNCATE TABLE option, product, category, wish, member RESTART IDENTITY CASCADE");
     }
 
