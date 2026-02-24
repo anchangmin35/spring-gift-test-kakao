@@ -34,7 +34,7 @@ public class GiftStepDefinitions {
     public void 카테고리와_상품과_옵션이_존재한다(String categoryName, String productName, int quantity, String optionName) {
         jdbcTemplate.update("INSERT INTO category (id, name) VALUES (1, ?)", categoryName);
         jdbcTemplate.update("INSERT INTO product (id, name, price, image_url, category_id) VALUES (1, ?, 10000, 'http://image.url', 1)", productName);
-        jdbcTemplate.update("INSERT INTO \"OPTION\" (id, name, quantity, product_id) VALUES (1, ?, ?, 1)", optionName, quantity);
+        jdbcTemplate.update("INSERT INTO option (id, name, quantity, product_id) VALUES (1, ?, ?, 1)", optionName, quantity);
     }
 
     @만약("회원 {long}이 옵션 {long}을 수량 {int}으로 회원 {long}에게 선물한다")

@@ -24,13 +24,7 @@ public class CommonStepDefinitions {
     @Before
     public void setUp() {
         RestAssured.port = port;
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
-        jdbcTemplate.execute("TRUNCATE TABLE \"OPTION\"");
-        jdbcTemplate.execute("TRUNCATE TABLE product");
-        jdbcTemplate.execute("TRUNCATE TABLE category");
-        jdbcTemplate.execute("TRUNCATE TABLE wish");
-        jdbcTemplate.execute("TRUNCATE TABLE member");
-        jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE");
+        jdbcTemplate.execute("TRUNCATE TABLE option, product, category, wish, member RESTART IDENTITY CASCADE");
     }
 
     @그러면("응답 상태코드는 {int}이다")
