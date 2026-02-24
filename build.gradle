@@ -41,13 +41,17 @@ tasks.register('cucumberTest', Test) {
 	include 'gift/cucumber/**'
 }
 
-tasks.register('dockerComposeUp', Exec) {
+tasks.register('dockerBuild', Exec) {
+	commandLine 'docker', 'compose', 'build'
+}
+
+tasks.register('dockerUp', Exec) {
 	commandLine 'docker', 'compose', 'up', '-d', '--wait'
 }
 
-tasks.register('dockerComposeDown', Exec) {
+tasks.register('dockerDown', Exec) {
 	commandLine 'docker', 'compose', 'down'
 }
 
-cucumberTest.dependsOn(dockerComposeUp)
-cucumberTest.finalizedBy(dockerComposeDown)
+cucumberTest.dependsOn(dockerUp)
+cucumberTest.finalizedBy(dockerDown)
