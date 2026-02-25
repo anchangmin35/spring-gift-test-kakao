@@ -48,8 +48,8 @@ public class CategoryStepDefinitions {
         assertThat(names).contains(name);
     }
 
-    @조건("이름이 {string}인 카테고리가 존재한다")
-    public void 이름이_인_카테고리가_존재한다(String name) {
+    @조건("카테고리 {string}가 존재한다")
+    public void 카테고리가_존재한다(String name) {
         RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body(Map.of("name", name))

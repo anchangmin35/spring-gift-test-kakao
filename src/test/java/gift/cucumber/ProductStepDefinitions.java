@@ -15,7 +15,7 @@ public class ProductStepDefinitions {
     @Autowired
     private SharedContext sharedContext;
 
-    @만약("카테고리 {string}에 이름이 {string}이고 가격이 {int}이고 이미지가 {string}인 상품을 생성한다")
+    @만약("{string} 카테고리에 이름이 {string}이고 가격이 {int}이고 이미지가 {string}인 상품을 생성한다")
     public void 카테고리에_상품을_생성한다(String categoryName, String name, int price, String imageUrl) {
         var categoriesResponse = RestAssured.given()
                 .when()
@@ -35,15 +35,15 @@ public class ProductStepDefinitions {
         sharedContext.setResponse(response);
     }
 
-    @만약("카테고리ID {long}에 이름이 {string}이고 가격이 {int}이고 이미지가 {string}인 상품을 생성한다")
-    public void 카테고리ID에_상품을_생성한다(long categoryId, String name, int price, String imageUrl) {
+    @만약("존재하지 않는 카테고리에 이름이 {string}이고 가격이 {int}이고 이미지가 {string}인 상품을 생성한다")
+    public void 존재하지_않는_카테고리에_상품을_생성한다(String name, int price, String imageUrl) {
         var response = RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body(Map.of(
                         "name", name,
                         "price", price,
                         "imageUrl", imageUrl,
-                        "categoryId", categoryId
+                        "categoryId", 9999L
                 ))
                 .when()
                 .post("/api/products");
@@ -65,8 +65,8 @@ public class ProductStepDefinitions {
         sharedContext.setResponse(response);
     }
 
-    @그리고("상품 목록에 {string}이 포함되어 있다")
-    public void 상품_목록에_이_포함되어_있다(String name) {
+    @그리고("상품 목록에 {string}가 포함되어 있다")
+    public void 상품_목록에_포함되어_있다(String name) {
         var response = sharedContext.getResponse();
         var names = response.jsonPath().getList("name", String.class);
         assertThat(names).contains(name);

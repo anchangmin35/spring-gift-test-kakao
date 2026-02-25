@@ -24,28 +24,39 @@ public class GiftStepDefinitions {
     @Autowired
     private OptionRepository optionRepository;
 
-    @조건("보내는 회원과 받는 회원이 존재한다")
-    public void 보내는_회원과_받는_회원이_존재한다() {
-        jdbcTemplate.update("INSERT INTO member (id, name, email) VALUES (1, '보내는사람', 'sender@test.com')");
-        jdbcTemplate.update("INSERT INTO member (id, name, email) VALUES (2, '받는사람', 'receiver@test.com')");
+    @조건("회원 {string}과 회원 {string}이 존재한다")
+    public void 회원과_회원이_존재한다(String senderName, String receiverName) {
+        jdbcTemplate.update("INSERT INTO member (name, email) VALUES (?, ?)", senderName, senderName + "@test.com");
+        Long senderId = jdbcTemplate.queryForObject("SELECT id FROM member WHERE name = ?", Long.class, senderName);
+        sharedContext.putMemberId(senderName, senderId);
+
+        jdbcTemplate.update("INSERT INTO member (name, email) VALUES (?, ?)", receiverName, receiverName + "@test.com");
+        Long receiverId = jdbcTemplate.queryForObject("SELECT id FROM member WHERE name = ?", Long.class, receiverName);
+        sharedContext.putMemberId(receiverName, receiverId);
     }
 
-    @그리고("카테고리 {string}와 상품 {string}과 수량이 {int}인 옵션 {string}이 존재한다")
-    public void 카테고리와_상품과_옵션이_존재한다(String categoryName, String productName, int quantity, String optionName) {
-        jdbcTemplate.update("INSERT INTO category (id, name) VALUES (1, ?)", categoryName);
-        jdbcTemplate.update("INSERT INTO product (id, name, price, image_url, category_id) VALUES (1, ?, 10000, 'http://image.url', 1)", productName);
-        jdbcTemplate.update("INSERT INTO option (id, name, quantity, product_id) VALUES (1, ?, ?, 1)", optionName, quantity);
+    @그리고("카테고리 {string}에 상품 {string}가 있고 수량이 {int}인 옵션 {string}가 존재한다")
+    public void 카테고리에_상품이_있고_옵션이_존재한다(String categoryName, String productName, int quantity, String optionName) {
+        jdbcTemplate.update("INSERT INTO category (name) VALUES (?)", categoryName);
+        Long categoryId = jdbcTemplate.queryForObject("SELECT id FROM category WHERE name = ?", Long.class, categoryName);
+
+        jdbcTemplate.update("INSERT INTO product (name, price, image_url, category_id) VALUES (?, 10000, 'http://image.url', ?)", productName, categoryId);
+        Long productId = jdbcTemplate.queryForObject("SELECT id FROM product WHERE name = ?", Long.class, productName);
+
+        jdbcTemplate.update("INSERT INTO option (name, quantity, product_id) VALUES (?, ?, ?)", optionName, quantity, productId);
+        Long optionId = jdbcTemplate.queryForObject("SELECT id FROM option WHERE name = ?", Long.class, optionName);
+        sharedContext.putOptionId(optionName, optionId);
     }
 
-    @만약("회원 {long}이 옵션 {long}을 수량 {int}으로 회원 {long}에게 선물한다")
-    public void 회원이_옵션을_수량으로_회원에게_선물한다(long senderId, long optionId, int quantity, long receiverId) {
+    @만약("{string}이 {string} {int}개를 {string}에게 선물한다")
+    public void 회원이_옵션을_회원에게_선물한다(String senderName, String optionName, int quantity, String receiverName) {
         var response = RestAssured.given()
                 .contentType(ContentType.JSON)
-                .header("Member-Id", senderId)
+                .header("Member-Id", sharedContext.getMemberId(senderName))
                 .body(Map.of(
-                        "optionId", optionId,
+                        "optionId", sharedContext.getOptionId(optionName),
                         "quantity", quantity,
-                        "receiverId", receiverId,
+                        "receiverId", sharedContext.getMemberId(receiverName),
                         "message", "선물입니다"
                 ))
                 .when()
@@ -53,13 +64,41 @@ public class GiftStepDefinitions {
         sharedContext.setResponse(response);
     }
 
-    @그리고("옵션이 존재하지 않는다")
-    public void 옵션이_존재하지_않는다() {
-        assertThat(optionRepository.findAll()).isEmpty();
+    @만약("존재하지 않는 회원이 {string} {int}개를 {string}에게 선물한다")
+    public void 존재하지_않는_회원이_선물한다(String optionName, int quantity, String receiverName) {
+        var response = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Member-Id", 9999L)
+                .body(Map.of(
+                        "optionId", sharedContext.getOptionId(optionName),
+                        "quantity", quantity,
+                        "receiverId", sharedContext.getMemberId(receiverName),
+                        "message", "선물입니다"
+                ))
+                .when()
+                .post("/api/gifts");
+        sharedContext.setResponse(response);
     }
 
-    @그리고("옵션 {long}의 수량은 {int}이다")
-    public void 옵션의_수량은_이다(long optionId, int expectedQuantity) {
+    @만약("{string}이 존재하지 않는 옵션 {int}개를 {string}에게 선물한다")
+    public void 존재하지_않는_옵션을_선물한다(String senderName, int quantity, String receiverName) {
+        var response = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Member-Id", sharedContext.getMemberId(senderName))
+                .body(Map.of(
+                        "optionId", 9999L,
+                        "quantity", quantity,
+                        "receiverId", sharedContext.getMemberId(receiverName),
+                        "message", "선물입니다"
+                ))
+                .when()
+                .post("/api/gifts");
+        sharedContext.setResponse(response);
+    }
+
+    @그리고("{string}의 재고는 {int}이다")
+    public void 옵션의_재고는_이다(String optionName, int expectedQuantity) {
+        Long optionId = sharedContext.getOptionId(optionName);
         var option = optionRepository.findById(optionId).orElseThrow();
         assertThat(option.getQuantity()).isEqualTo(expectedQuantity);
     }
