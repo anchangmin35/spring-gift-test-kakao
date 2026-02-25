@@ -136,7 +136,7 @@ app:
     postgres:
       condition: service_healthy
   healthcheck:
-    test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/api/categories || exit 1"]
+    test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
     interval: 5s
     timeout: 3s
     retries: 10
@@ -151,7 +151,7 @@ app:
 | `SPRING_DATASOURCE_URL` | `postgres:5432` | Docker 내부 네트워크에서 service name으로 접근 |
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` | 앱이 테이블 생성/관리 |
 | `depends_on: condition` | `service_healthy` | PostgreSQL ready 후 앱 시작 |
-| healthcheck | `wget --spider` | Alpine에 curl 없으므로 wget 사용 |
+| healthcheck | `wget` + Actuator `/actuator/health` | 업계 표준 헬스체크 엔드포인트 사용. Alpine에 curl 없으므로 wget 사용 |
 | `retries: 10` | 10회 | 앱 시작이 DB보다 오래 걸림 |
 
 ### 4.3 depends_on의 condition
@@ -187,7 +187,7 @@ Docker Network: spring-gift-test-kakao_default
 | 접근 주체 | PostgreSQL 접근 | App 접근 |
 |----------|----------------|---------|
 | 앱 (컨테이너) | `postgres:5432` | — |
-| 테스트 (호스트) | `localhost:5432` | `localhost:28080` |
+| 테스트 (호스트) | `localhost:25432` | `localhost:28080` |
 
 ```
 ┌──── Docker Network ────────────────────┐
@@ -197,7 +197,7 @@ Docker Network: spring-gift-test-kakao_default
 └──────┼────────────────────┼─────────────┘
        │ port mapping       │ port mapping
        ▼                    ▼
-  localhost:5432       localhost:28080
+  localhost:25432      localhost:28080
        │                    │
   ┌────┴────────────────────┴────┐
   │     Test Code (Host)          │
@@ -336,7 +336,7 @@ cucumberTest.finalizedBy(dockerDown)
 |---|---|
 | Builder: Debian, Runtime: Alpine | Gradle 네이티브 라이브러리가 Alpine에서 크래시. JAR 실행은 Alpine에서 문제 없음 |
 | 포트 28080 | 호스트의 8080과 충돌 방지. 테스트 전용 포트임을 명시 |
-| `wget --spider` healthcheck | Alpine에 curl 미포함. busybox wget으로 대체 |
+| Spring Actuator healthcheck | 업계 표준 `/actuator/health` 엔드포인트 사용. 비즈니스 API 의존 제거 |
 | `ddl-auto=update` (앱) | 앱이 스키마 관리 담당. `create`는 매번 DROP하므로 위험 |
 | `ddl-auto=validate` (테스트) | 스키마 변경하지 않고 확인만. 앱과 충돌 방지 |
 | `depends_on: service_healthy` | PostgreSQL ready 후 앱 시작. 시작 순서만으로는 불충분 |
@@ -358,10 +358,10 @@ Docker Compose가 자동으로 생성하는 네트워크에 내장 DNS 서버가
 각 서비스 이름을 DNS 레코드로 등록하므로,
 `postgres`라는 이름으로 PostgreSQL 컨테이너의 IP를 resolve할 수 있다.
 
-**Q. 컨테이너 내부에서는 postgres:5432, 테스트에서는 localhost:28080인 이유는?**
+**Q. 컨테이너 내부에서는 postgres:5432, 테스트에서는 localhost:25432인 이유는?**
 
 컨테이너끼리는 Docker 내부 네트워크를 통해 service name으로 통신한다.
-호스트에서는 port mapping(`28080:8080`)을 통해 `localhost:28080`으로 접근한다.
+호스트에서는 port mapping(`25432:5432`, `28080:8080`)을 통해 접근한다.
 같은 서비스지만 접근 경로가 다른 이유는 네트워크 경계가 다르기 때문이다.
 
 **Q. webEnvironment = NONE을 사용하는 이유는?**
@@ -377,7 +377,7 @@ Docker 앱에는 "모든 테이블 TRUNCATE" API가 없으므로,
 테스트가 직접 DB에 JDBC로 접속하여 TRUNCATE를 실행한다.
 
 ```java
-// 테스트 (호스트) → JDBC → localhost:5432 → PostgreSQL (Docker)
+// 테스트 (호스트) → JDBC → localhost:25432 → PostgreSQL (Docker)
 jdbcTemplate.execute("TRUNCATE TABLE option, product, category, wish, member RESTART IDENTITY CASCADE");
 ```
 

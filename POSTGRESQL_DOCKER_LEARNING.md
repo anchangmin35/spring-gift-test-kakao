@@ -43,7 +43,7 @@ services:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
     ports:
-      - "5432:5432"
+      - "25432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U test -d gift_test"]
       interval: 5s
@@ -58,7 +58,7 @@ services:
 | `services` | 실행할 컨테이너 목록 정의 |
 | `image: postgres:16-alpine` | PostgreSQL 16 경량 이미지 사용 |
 | `environment` | 컨테이너 내부 환경변수 설정 (DB명, 사용자, 비밀번호) |
-| `ports: "5432:5432"` | 호스트 포트:컨테이너 포트 매핑 |
+| `ports: "25432:5432"` | 호스트 포트:컨테이너 포트 매핑 (로컬 PostgreSQL과 충돌 방지) |
 | `healthcheck` | 컨테이너 준비 상태 확인 방법 정의 |
 
 ### 2.3 Healthcheck는 왜 필요한가?
@@ -117,7 +117,7 @@ spring.jpa.open-in-view=false
 
 **application-cucumber.properties** (PostgreSQL):
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/gift_test
+spring.datasource.url=jdbc:postgresql://localhost:25432/gift_test
 spring.datasource.username=test
 spring.datasource.password=test
 spring.jpa.hibernate.ddl-auto=create-drop
@@ -214,7 +214,7 @@ cucumberTest.finalizedBy(dockerComposeDown)
   │
   ├── 2. cucumberTest
   │      Cucumber 시나리오 7개 실행
-  │      Spring Boot → PostgreSQL (localhost:5432)
+  │      Spring Boot → PostgreSQL (localhost:25432)
   │
   └── 3. dockerComposeDown         (finalizedBy, 항상 실행)
          docker compose down
@@ -281,21 +281,21 @@ PostgreSQL 방식이 더 간결하고 한 줄로 끝난다.
 │  │       │                         │  │
 │  │       │ JDBC                    │  │
 │  │       ▼                         │  │
-│  │  localhost:5432                  │  │
+│  │  localhost:25432                 │  │
 │  └───────────┬─────────────────────┘  │
 │              │ port mapping            │
 │  ┌───────────▼─────────────────────┐  │
 │  │  Docker Container               │  │
 │  │  PostgreSQL 16                  │  │
 │  │  - DB: gift_test                │  │
-│  │  - 내부 포트: 5432              │  │
+│  │  - 내부 포트: 5432 (호스트: 25432) │  │
 │  └─────────────────────────────────┘  │
 └───────────────────────────────────────┘
 ```
 
 - 테스트 코드와 Spring Boot는 **호스트(Host)** 에서 실행된다
 - PostgreSQL은 **Docker 컨테이너** 안에서 실행된다
-- `ports: "5432:5432"` 매핑으로 호스트의 `localhost:5432`가 컨테이너의 `5432`로 연결된다
+- `ports: "25432:5432"` 매핑으로 호스트의 `localhost:25432`가 컨테이너의 `5432`로 연결된다 (로컬 PostgreSQL 5432 포트와 충돌 방지)
 
 ---
 

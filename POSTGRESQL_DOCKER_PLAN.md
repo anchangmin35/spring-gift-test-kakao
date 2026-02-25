@@ -63,7 +63,7 @@ services:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
     ports:
-      - "5432:5432"
+      - "25432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U test -d gift_test"]
       interval: 5s
@@ -74,13 +74,13 @@ services:
 **설계 근거:**
 - `postgres:16-alpine`: 경량 이미지로 빠른 다운로드/시작
 - `healthcheck`: `pg_isready`로 PostgreSQL이 실제 쿼리를 받을 준비가 되었는지 확인
-- 포트 `5432:5432`: 호스트에서 localhost:5432로 접근 가능
+- 포트 `25432:5432`: 호스트에서 localhost:25432로 접근 가능 (로컬 PostgreSQL과 충돌 방지)
 - `--wait` 플래그와 함께 사용 시 healthcheck 통과까지 자동 대기
 
 **네트워크 구조 (요구사항 2 단계):**
 ```
-테스트 코드 (Host) → JDBC → localhost:5432 → PostgreSQL (Docker Container)
-Spring Boot App (Host, @SpringBootTest) → localhost:5432 → PostgreSQL (Docker Container)
+테스트 코드 (Host) → JDBC → localhost:25432 → PostgreSQL (Docker Container)
+Spring Boot App (Host, @SpringBootTest) → localhost:25432 → PostgreSQL (Docker Container)
 ```
 
 ---
@@ -152,14 +152,14 @@ cucumberTest.finalizedBy(dockerComposeDown)
 **새 파일:** `src/test/resources/application-cucumber.properties`
 
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/gift_test
+spring.datasource.url=jdbc:postgresql://localhost:25432/gift_test
 spring.datasource.username=test
 spring.datasource.password=test
 spring.jpa.hibernate.ddl-auto=create-drop
 ```
 
 **설계 근거:**
-- `jdbc:postgresql://localhost:5432/gift_test`: Docker Compose에서 매핑한 포트로 접근
+- `jdbc:postgresql://localhost:25432/gift_test`: Docker Compose에서 매핑한 포트로 접근
 - `create-drop`: 테스트 컨텍스트 시작 시 스키마 생성, 종료 시 삭제 → 깨끗한 상태 보장
 - `spring.datasource.driver-class-name`은 URL에서 자동 감지되므로 불필요
 - `hibernate.dialect`도 Spring Boot 3.x에서 자동 감지되므로 불필요
@@ -315,7 +315,7 @@ docker ps   # postgres 컨테이너가 없어야 함
 │  │                   │   │  │                   │ │
 │  │  Docker 불필요     │   │  │ JDBC              │ │
 │  └──────────────────┘   │  ▼                   │ │
-│                          │  localhost:5432       │ │
+│                          │  localhost:25432      │ │
 │                          └──────────┬──────────┘ │
 │                                     │             │
 │  ┌──────────────────────────────────▼───────────┐│
